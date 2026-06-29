@@ -51,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	var channels []string
-	for channel := range strings.SplitSeq(*channelsFlag, ",") {
+	for _, channel := range strings.Split(*channelsFlag, ",") {
 		if channel = strings.TrimSpace(channel); channel != "" {
 			channels = append(channels, channel)
 		}
