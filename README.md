@@ -155,3 +155,12 @@ kill -SIGSTOP <socat child pid>  # pause data flow (exercise keepalive stall det
 kill -SIGCONT <socat child pid>  # resume
 kill -SIGKILL <socat child pid>  # force a reconnect
 ```
+
+## Examples
+
+Runnable, beginner-to-advanced examples live in [`examples/`](./examples), from
+a minimal subscriber to a high-throughput worker pool.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
