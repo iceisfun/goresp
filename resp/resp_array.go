@@ -74,10 +74,15 @@ func (a *RESPArray) Decode(buf *bytes.Buffer, start int) (int, error) {
 
 	consumed := end + len(PROTOCOL_SEPARATOR)
 
-	if count == -1 {
-		// Null array
-		a.Items = nil
-		return consumed, nil
+	if count < 0 {
+		if count == -1 {
+			// Null array.
+			a.Items = nil
+			return consumed, nil
+		}
+		// Any other negative count is a protocol violation; guard against the
+		// make([]RESPValue, 0, count) panic on corrupt or hostile input.
+		return 0, errUnrecoverableProtocol
 	}
 
 	a.Items = make([]RESPValue, 0, count)

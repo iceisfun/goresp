@@ -75,10 +75,15 @@ func (bs *RESPBulkString) Decode(buf *bytes.Buffer, start int) (int, error) {
 
 	consumed := end + len(PROTOCOL_SEPARATOR)
 
-	if length == -1 {
-		// Null bulk string
-		bs.Value = nil
-		return consumed, nil
+	if length < 0 {
+		if length == -1 {
+			// Null bulk string.
+			bs.Value = nil
+			return consumed, nil
+		}
+		// Any other negative length is a protocol violation; guard against the
+		// make([]byte, length) panic on corrupt or hostile input.
+		return 0, errUnrecoverableProtocol
 	}
 
 	if start+consumed+length+len(PROTOCOL_SEPARATOR) > buf.Len() {
