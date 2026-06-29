@@ -115,13 +115,22 @@ needed. `publish.New` creates and owns that dedicated connection for you:
 pub := publish.New("127.0.0.1:6379") // owns a dedicated, auto-reconnecting publish connection
 defer pub.Close()
 
+// Fire-and-forget: non-blocking, best-effort, no reply.
 pub.PublishJSON("events.created", map[string]any{"id": 42})
 pub.Publish("raw.channel", []byte("bytes"))
+
+// Confirmed: synchronous, returns the subscriber count (or a *publish.RedisError),
+// bounded by a context.
+n, err := pub.PublishCtx(ctx, "events.created", []byte("bytes"))
+// n == number of clients that received it
 ```
 
-It takes the same connection options as `connection.New`
-(`publish.New(addr, connection.WithTimeouts(...))`). To drive publishing through
-a connection you manage yourself, use `publish.Wrap(sender)`.
+`publish.New` takes the same connection options as `connection.New`
+(`publish.New(addr, connection.WithTimeouts(...))`). The confirmed methods
+(`PublishCtx`/`PublishJSONCtx`) open a second, synchronous request/reply
+connection on demand — they need Redis's reply, which can't share the async
+firehose. To drive fire-and-forget publishing through a connection you manage
+yourself, use `publish.Wrap(sender)` (confirmed publishing needs `publish.New`).
 
 ## Encoding & commands
 
