@@ -1,6 +1,7 @@
 package connection_test
 
 import (
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -93,6 +94,57 @@ func TestReconnectClearsPartialState(t *testing.T) {
 	}
 	if c.disconnects.Load() < 1 {
 		t.Errorf("expected at least 1 disconnect, got %d", c.disconnects.Load())
+	}
+}
+
+// TestContextShutdown verifies that cancelling the bound context tears the
+// connection down (an established connection fires OnDisconnect).
+func TestContextShutdown(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	accepted := make(chan struct{}, 1)
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			select {
+			case accepted <- struct{}{}:
+			default:
+			}
+			go drainReads(conn)
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	c := newCollector()
+	conn := connection.New(ln.Addr().String(), c,
+		connection.WithEvents(c),
+		connection.WithContext(ctx),
+		connection.WithKeepAlive(false),
+	)
+	defer conn.Close()
+
+	select {
+	case <-accepted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("server never accepted a connection")
+	}
+
+	cancel()
+
+	deadline := time.After(2 * time.Second)
+	for c.disconnects.Load() == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("context cancel did not disconnect the connection")
+		case <-time.After(10 * time.Millisecond):
+		}
 	}
 }
 

@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"context"
 	"math/rand"
 	"net"
 	"strconv"
@@ -37,6 +38,7 @@ type Reconnecting struct {
 	addr    string
 	handler Handler
 	events  EventHandler
+	ctx     context.Context
 
 	keepAlive         bool
 	keepAliveInterval time.Duration
@@ -66,6 +68,17 @@ func WithEvents(e EventHandler) Option {
 	return func(r *Reconnecting) {
 		if e != nil {
 			r.events = e
+		}
+	}
+}
+
+// WithContext binds the connection's lifetime to ctx. Cancelling ctx shuts the
+// connection down exactly as Close does (and Close remains callable too,
+// whichever happens first). Defaults to context.Background (no-op).
+func WithContext(ctx context.Context) Option {
+	return func(r *Reconnecting) {
+		if ctx != nil {
+			r.ctx = ctx
 		}
 	}
 }
@@ -128,6 +141,7 @@ func New(addr string, handler Handler, opts ...Option) *Reconnecting {
 		addr:              addr,
 		handler:           handler,
 		events:            NoopEvents{},
+		ctx:               context.Background(),
 		keepAlive:         true,
 		keepAliveInterval: defaultKeepAliveInterval,
 		maxReconnectDelay: defaultMaxReconnectDelay,
@@ -149,8 +163,23 @@ func New(addr string, handler Handler, opts ...Option) *Reconnecting {
 	if r.keepAlive {
 		go r.handleHealthCheck()
 	}
+	// A cancellable context shuts the connection down on cancel. Background's
+	// Done() is nil, so the watcher is skipped when no context was supplied.
+	if r.ctx.Done() != nil {
+		go r.watchContext()
+	}
 
 	return r
+}
+
+// watchContext closes the connection when its context is cancelled, then exits.
+// It also exits if Close is called first, so it never leaks.
+func (r *Reconnecting) watchContext() {
+	select {
+	case <-r.ctx.Done():
+		r.Close()
+	case <-r.done:
+	}
 }
 
 // Close stops the connection and all background goroutines.
@@ -242,6 +271,12 @@ func (r *Reconnecting) handleReconnect() {
 			return
 		default:
 			if err := r.connect(); err != nil {
+				// Don't report/backoff if we're shutting down.
+				select {
+				case <-r.done:
+					return
+				default:
+				}
 				r.events.OnError(err)
 				if !r.sleep(r.reconnectDelay) {
 					return
@@ -271,6 +306,15 @@ func (r *Reconnecting) connect() error {
 	conn, err := net.DialTimeout("tcp", r.addr, r.dialTimeout)
 	if err != nil {
 		return err
+	}
+
+	// If we were shut down while dialing, drop the fresh connection instead of
+	// establishing one that would linger until the next read timeout.
+	select {
+	case <-r.done:
+		conn.Close()
+		return context.Canceled
+	default:
 	}
 
 	r.mutex.Lock()

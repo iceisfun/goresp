@@ -5,9 +5,9 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-	"os"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -57,12 +57,16 @@ func main() {
 		}
 	}
 
-	conn := connection.New(*redisAddr, printHandler{}, connection.WithEvents(logEvents{channels: channels}))
+	// Cancelling the context on SIGINT/SIGTERM shuts the connection down.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	conn := connection.New(*redisAddr, printHandler{},
+		connection.WithEvents(logEvents{channels: channels}),
+		connection.WithContext(ctx),
+	)
 	defer conn.Close()
 
 	log.Printf("listening on %s; press Ctrl+C to exit", *redisAddr)
-
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-	<-shutdown
+	<-ctx.Done()
 }

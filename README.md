@@ -83,10 +83,20 @@ Offload to your own queue if you need to decouple processing from the socket.
 
 ```go
 connection.WithEvents(EventHandler)             // lifecycle + errors (default: noop)
+connection.WithContext(ctx)                     // cancel ctx to shut down (like Close)
 connection.WithKeepAlive(bool)                  // idle PING/PONG keepalive (default: on)
 connection.WithKeepAliveInterval(time.Duration) // idle threshold/period (default: 5s)
 connection.WithTimeouts(read, write, dial time.Duration)
 connection.WithMaxReconnectDelay(time.Duration)
+```
+
+`WithContext` binds the connection to a context, so it shuts down on cancel
+(`Close` still works too, whichever fires first):
+
+```go
+ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+defer stop()
+conn := connection.New(addr, handler, connection.WithContext(ctx))
 ```
 
 The keepalive only PINGs when **no** data has arrived within the interval —
