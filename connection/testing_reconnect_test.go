@@ -45,6 +45,8 @@ func TestReconnectClearsPartialState(t *testing.T) {
 
 	var connCount atomic.Int32
 	serverDone := make(chan struct{})
+	serverHold := make(chan struct{})
+	defer close(serverHold)
 	go func() {
 		defer close(serverDone)
 		for {
@@ -86,8 +88,6 @@ func TestReconnectClearsPartialState(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("timed out waiting for message after reconnect")
 	}
-
-	close(serverHold)
 
 	if c.connects.Load() < 2 {
 		t.Errorf("expected at least 2 connects, got %d", c.connects.Load())
@@ -147,8 +147,6 @@ func TestContextShutdown(t *testing.T) {
 		}
 	}
 }
-
-var serverHold = make(chan struct{})
 
 func drainReads(conn net.Conn) {
 	buf := make([]byte, 4096)
