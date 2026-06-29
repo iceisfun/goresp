@@ -11,6 +11,7 @@ Runnable examples, beginner to advanced. Each is a standalone `main` package.
 | 05 | [graceful-shutdown](./05-graceful-shutdown) | `WithContext` + `signal.NotifyContext` |
 | 06 | [replay-from-disk](./06-replay-from-disk) | Driving `resp.Decode` from a file; no Redis |
 | 07 | [worker-pool](./07-worker-pool) | Decoupled, high-throughput processing |
+| 08 | [publish-confirm](./08-publish-confirm) | Confirmed publish with subscriber count via `PublishCtx` |
 
 Most need a Redis (or compatible) server:
 
