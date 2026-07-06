@@ -4,6 +4,9 @@ import (
 	"bytes"
 )
 
+// RESPSimpleString is a RESP simple string (prefix '+'): a short, CRLF-terminated
+// status line such as "+OK". It carries no length prefix and must not contain a
+// CR or LF.
 type RESPSimpleString struct {
 	Value string
 }

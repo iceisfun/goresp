@@ -5,6 +5,10 @@ import (
 	"strconv"
 )
 
+// RESPBulkString is a RESP bulk string (prefix '$'): a length-prefixed,
+// binary-safe byte slice such as "$6\r\nfoobar". It is the type that carries
+// pub/sub channel names and payloads. A nil Value represents the RESP null bulk
+// string ("$-1"), which is distinct from an empty (non-nil, zero-length) string.
 type RESPBulkString struct {
 	Value []byte
 }

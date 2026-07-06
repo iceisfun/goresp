@@ -6,6 +6,9 @@ import (
 	"strconv"
 )
 
+// RESPInteger is a RESP integer (prefix ':'): a signed 64-bit value such as
+// ":1000". Redis returns it for counts and booleans — for example the number of
+// clients that received a PUBLISH.
 type RESPInteger struct {
 	Value int64
 }

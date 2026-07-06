@@ -6,6 +6,10 @@ import (
 	"strconv"
 )
 
+// RESPArray is a RESP array (prefix '*'): an ordered, possibly nested sequence
+// of RESP values such as "*3\r\n...". Pub/sub deliveries arrive as arrays (for
+// example ["message", channel, payload]). A nil Items represents the RESP null
+// array ("*-1"), which is distinct from an empty (non-nil, zero-length) array.
 type RESPArray struct {
 	Items []RESPValue
 }

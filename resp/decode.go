@@ -19,6 +19,7 @@ type Decode struct {
 	need int
 }
 
+// NewDecode returns a ready-to-use streaming decoder with an empty buffer.
 func NewDecode() *Decode {
 	return &Decode{}
 }

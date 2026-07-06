@@ -4,6 +4,9 @@ import (
 	"bytes"
 )
 
+// RESPError is a RESP error reply (prefix '-'): a CRLF-terminated error line
+// such as "-ERR unknown command". Value holds the message without the leading
+// '-' or trailing CRLF.
 type RESPError struct {
 	Value string
 }
